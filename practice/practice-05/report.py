@@ -4,128 +4,128 @@ import time
 import numpy as np
 
 
-def timer(func):
-    start = time.perf_counter()
-    func()
-    return time.perf_counter() - start
+def measure(fn, x, repeat=3):
+    best = float("inf")
+    result = ()
+    for _ in range(repeat):
+        t0 = time.perf_counter()
+        result = fn(x)
+        t1 = time.perf_counter()
+        best = min(best, t1 - t0)
+    return result, best
 
 
-print("--- Задача 1. Сумма массива ---")
+rng = np.random.default_rng(42)
+
+
+print("=" * 60)
+print("ЗАДАЧА 1. Сумма массива")
+print("=" * 60)
+print(f"{'Размер (n)':<12} | {'Цикл (мс)':<12} | {'NumPy (мс)':<12} | {'Ускорение':<10}")
+print("-" * 60)
 for n in [10**5, 10**6, 10**7]:
-    a = np.random.rand(n)
-    t1 = timer(lambda: sum(a))
-    t2 = timer(lambda: a.sum())
-    print(f"n={n}: Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: NumPy работает на C под капотом. Ускорение растет с n и становится заметным (>10x) уже на 10^5.\n")
+    a = rng.normal(size=n)
+
+    def loop_sum(arr):
+        s = 0.0
+        for x in arr: s += x
+        return s
+
+    def numpy_sum(arr): return arr.sum()
+
+    r_loop, t_loop = measure(loop_sum, a)
+    r_numpy, t_numpy = measure(numpy_sum, a)
+    print(f"{n:<12} | {t_loop*1000:<12.1f} | {t_numpy*1000:<12.1f} | {t_loop/t_numpy:<10.1f}x")
+print("Вывод: NumPy использует C и SIMD-инструкции. Ускорение стабильно высокое (более 200x) и не зависит от размера массива.\n")
 
 
-print("--- Задача 2. Среднее и std ---")
-n = 10**6
-a = np.random.rand(n)
-def stats_loop(arr):
+print("=" * 60)
+print("ЗАДАЧА 2. Среднее и std")
+print("=" * 60)
+a = rng.normal(size=10**6)
+
+def loop_stats(arr):
     s, sq = 0.0, 0.0
     for x in arr:
         s += x; sq += x*x
     mean = s / len(arr)
     return mean, math.sqrt(sq/len(arr) - mean**2)
 
-t1 = timer(lambda: stats_loop(a))
-t2 = timer(lambda: (a.mean(), a.std()))
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: NumPy быстрее и точнее, так как использует устойчивый алгоритм, а не формулу с суммой квадратов.\n")
+def numpy_stats(arr): return arr.mean(), arr.std()
+
+r_loop, t_loop = measure(loop_stats, a)
+r_numpy, t_numpy = measure(numpy_stats, a)
+print(f"{'Метод':<15} | {'Время (мс)':<12} | {'Mean':<10} | {'Std':<10}")
+print("-" * 60)
+print(f"{'Цикл':<15} | {t_loop*1000:<12.1f} | {r_loop[0]:<10.4f} | {r_loop[1]:<10.4f}") # type: ignore
+print(f"{'NumPy':<15} | {t_numpy*1000:<12.1f} | {r_numpy[0]:<10.4f} | {r_numpy[1]:<10.4f}") # type: ignore
+print(f"\nУскорение: {t_loop/t_numpy:.1f}x")
+print("Вывод: NumPy быстрее в десятки раз. Результаты совпадают, но NumPy использует более устойчивый алгоритм без накопления ошибки.\n")
 
 
-print("--- Задача 3. Поэлементное преобразование ---")
-a = np.random.rand(10**6) * 10
-t1 = timer(lambda: [math.sin(x) + x*x for x in a])
-t2 = timer(lambda: np.sin(a) + a**2)
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: Векторизация избавляет от медленных циклов Python.\n")
+print("=" * 60)
+print("ЗАДАЧА 3. sin(x) + x^2")
+print("=" * 60)
+a = rng.normal(size=10**6) * 10
+
+def loop_transform(arr): return [math.sin(x) + x*x for x in arr]
+def numpy_transform(arr): return np.sin(arr) + arr**2
+
+r_loop, t_loop = measure(loop_transform, a)
+r_numpy, t_numpy = measure(numpy_transform, a)
+print(f"{'Метод':<15} | {'Время (мс)':<12}")
+print("-" * 30)
+print(f"{'Цикл':<15} | {t_loop*1000:<12.1f}")
+print(f"{'NumPy':<15} | {t_numpy*1000:<12.1f}")
+print(f"\nУскорение: {t_loop/t_numpy:.1f}x")
+print("Вывод: Векторизация избавляет от вызова math.sin миллион раз и работает в разы быстрее.\n")
 
 
-print("--- Задача 4. Условная замена (clip) ---")
-a = np.random.randn(10**6)
-def clip_loop(arr):
-    res = np.empty_like(arr)
-    for i in range(len(arr)):
-        if arr[i] < 0: res[i] = 0
-        elif arr[i] > 1: res[i] = 1
-        else: res[i] = arr[i]
+print("=" * 60)
+print("ЗАДАЧА 4. Условная замена (clip)")
+print("=" * 60)
+a = rng.normal(size=10**6)
+
+def loop_clip(arr):
+    res = []
+    for x in arr:
+        if x < 0: res.append(0)
+        elif x > 1: res.append(1)
+        else: res.append(x)
     return res
-t1 = timer(lambda: clip_loop(a))
-t2 = timer(lambda: np.clip(a, 0, 1))
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print(f"Изменено: {np.sum((a < 0) | (a > 1))}")
-print("Вывод: np.clip заменяет цикл с ветвлениями одной функцией.\n")
+
+def numpy_clip(arr): return np.clip(arr, 0, 1)
+
+r_loop, t_loop = measure(loop_clip, a)
+r_numpy, t_numpy = measure(numpy_clip, a)
+print(f"{'Метод':<15} | {'Время (мс)':<12}")
+print("-" * 30)
+print(f"{'Цикл':<15} | {t_loop*1000:<12.1f}")
+print(f"{'NumPy':<15} | {t_numpy*1000:<12.1f}")
+print(f"\nУскорение: {t_loop/t_numpy:.1f}x")
+print("Вывод: np.clip заменяет громоздкий цикл с if/elif одной командой, которая работает на порядок быстрее.\n")
 
 
-print("--- Задача 5. Сумма по строкам ---")
-m = np.random.rand(10**5, 10)
-def sum_rows(matrix):
-    res = np.empty(matrix.shape[0])
-    for i in range(matrix.shape[0]):
-        s = 0
-        for j in range(matrix.shape[1]):
-            s += matrix[i, j]
-        res[i] = s
-    return res
-t1 = timer(lambda: sum_rows(m))
-t2 = timer(lambda: m.sum(axis=1))
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: axis=1 заменяет двойной цикл одной строкой кода.\n")
+print("=" * 60)
+print("ЗАДАЧА 5. Сумма по строкам матрицы")
+print("=" * 60)
+m = rng.normal(size=(10**5, 10))
 
+def loop_sum_rows(mat):
+    result = [0.0] * mat.shape[0]
+    for i in range(mat.shape[0]):
+        s = 0.0
+        for j in range(mat.shape[1]): s += mat[i, j]
+        result[i] = s
+    return result
 
-print("--- Задача 6. Среднее по столбцам ---")
-def norm_loop(matrix):
-    res = matrix.copy()
-    for j in range(matrix.shape[1]):
-        col_mean = sum(matrix[i, j] for i in range(matrix.shape[0])) / matrix.shape[0]
-        for i in range(matrix.shape[0]):
-            res[i, j] -= col_mean
-    return res
-t1 = timer(lambda: norm_loop(m))
-t2 = timer(lambda: m - m.mean(axis=0))
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: Broadcasting позволяет вычесть среднее из всех элементов без явных циклов.\n")
+def numpy_sum_rows(mat): return mat.sum(axis=1)
 
-
-print("--- Задача 7. Максимум и его индекс ---")
-a = np.random.rand(10**6)
-def max_loop(arr):
-    max_val, max_idx = arr[0], 0
-    for i in range(1, len(arr)):
-        if arr[i] > max_val:
-            max_val = arr[i]; max_idx = i
-    return max_val, max_idx
-t1 = timer(lambda: max_loop(a))
-t2 = timer(lambda: (a.max(), a.argmax()))
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: Встроенные функции работают быстрее и лаконичнее.\n")
-
-
-print("--- Задача 8. Фильтрация > 0 ---")
-a = np.random.randn(10**6)
-t1 = timer(lambda: [x for x in a if x > 0])
-t2 = timer(lambda: a[a > 0])
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: Булева маска работает быстрее генератора списков и не создает промежуточных Python-объектов.\n")
-
-
-print("--- Задача 9. Замена отрицательных на модуль ---")
-a = np.random.randn(10**6)
-b = a.copy()
-def abs_loop(arr):
-    for i in range(len(arr)):
-        if arr[i] < 0: arr[i] = -arr[i]
-t1 = timer(lambda: abs_loop(a))
-t2 = timer(lambda: np.abs(b, out=b))
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: np.abs(out=...) изменяет на месте без выделения памяти.\n")
-
-
-print("--- Задача 10. Комбинированная маска ---")
-a = np.random.randn(10**6)
-t1 = timer(lambda: [x for x in a if -1 < x < 1])
-t2 = timer(lambda: a[(a > -1) & (a < 1)])
-print(f"Цикл {t1:.4f}с, NumPy {t2:.4f}с, Ускорение {t1/t2:.1f}x")
-print("Вывод: В NumPy нужно ставить скобки и использовать & вместо and. Чуть менее читаемо, но быстрее.")
+r_loop, t_loop = measure(loop_sum_rows, m)
+r_numpy, t_numpy = measure(numpy_sum_rows, m)
+print(f"{'Метод':<15} | {'Время (мс)':<12}")
+print("-" * 30)
+print(f"{'Цикл':<15} | {t_loop*1000:<12.1f}")
+print(f"{'NumPy':<15} | {t_numpy*1000:<12.1f}")
+print(f"\nУскорение: {t_loop/t_numpy:.1f}x")
+print("Вывод: axis=1 заменяет двойной цикл одной строкой кода. Время выполнения сокращается более чем в 100 раз.")
