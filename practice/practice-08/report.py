@@ -29,12 +29,30 @@ plt.plot(hexagon[:, 0], hexagon[:, 1], 'o-', color='gray', label='Исходны
 plt.plot(rotated[:, 0], rotated[:, 1], 'o-', color='blue', label='Поворот 45°')
 plt.plot(reflected[:, 0], reflected[:, 1], 'o-', color='red', label='Отражение y=x')
 
-plt.axhline(0, color='black', lw=0.5)
-plt.axvline(0, color='black', lw=0.5)
+# Улучшенное отображение осей
+plt.axhline(0, color='black', lw=1.0, zorder=0) # zorder=0, чтобы оси были под точками
+plt.axvline(0, color='black', lw=1.0, zorder=0)
+
+# Добавляем подписи осей и стрелки
+plt.xlabel('X', fontsize=12, labelpad=10)
+plt.ylabel('Y', fontsize=12, labelpad=10)
+plt.arrow(-1.2, 0, 2.4, 0, head_width=0.08, head_length=0.1, fc='black', ec='black', length_includes_head=True, zorder=0)
+plt.arrow(0, -1.2, 0, 2.4, head_width=0.08, head_length=0.1, fc='black', ec='black', length_includes_head=True, zorder=0)
+
+# Настройка пределов для симметрии и места под стрелки
+plt.xlim(-1.5, 1.5)
+plt.ylim(-1.5, 1.5)
+
 plt.gca().set_aspect('equal')
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.title('Преобразования шестиугольника')
+
+# Остальной код (Задача 2) остается без изменений
+# ... (код второй задачи) ...
+
+# Отображение графиков
+plt.show()
 
 # Задача 2: Композиция преобразований
 rng = np.random.default_rng(42)
