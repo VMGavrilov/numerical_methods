@@ -22,7 +22,7 @@ def f1(x): return x**3 - 2 * x - 5
 print(f"f(2) = {f1(2)}, f(3) = {f1(3)}")
 root1, log1 = bisection(f1, 2, 3, 1e-6)
 
-print("k | a | b | c | f(c) | b-a")
+print("k | a | b | c | f | b-a")
 for row in log1:
     print(f"{row[0]} | {row[1]:.6f} | {row[2]:.6f} | {row[3]:.6f} | {row[4]:.2e} | {row[5]:.2e}")
 
@@ -40,7 +40,7 @@ plt.show()
 intervals = [(-3, -1), (-1, 1), (1, 3)]
 roots = [-2, 0, 2]
 
-print("Интервал | корень (числ.) | корень (аналит.) | итераций")
+print("Интервал | корень | корень | итераций")
 for i in range(3):
     a, b = intervals[i]
     r, log = bisection(f2, a, b, 1e-8)
@@ -56,7 +56,7 @@ print(f"f(0) = {f3(0)}, f(1) = {f3(1):.4f}")
 eps_list = [1e-2, 1e-4, 1e-6, 1e-8, 1e-10]
 iters = []
 
-print("eps | итераций | финальный интервал | f(корень)")
+print("eps | итераций | финальный интервал | f")
 for e in eps_list:
     r, log = bisection(f3, 0, 1, e)
     iters.append(len(log))
